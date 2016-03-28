@@ -5,16 +5,51 @@ class GoodsController extends Controller
 {
 	public function goods_number()
 	{
-	    header('Content-Type:text/html;charset=utf8');
 	    //接收商品id
 	    $id = I('get.id');
+	    $gnModel = D('goods_number');
+	    if (IS_POST)
+	    {
+	    	// 先删除原库存
+	    	$gnModel->where(array(
+	    		'goods_id'=> array('eq',$id),
+	    	))->delete();
+	    	$gaid = I('post.goods_attr_id');
+	    	$gn = I('post.goods_number');
+	    	// 先计算商品属性id 和库存量比例
+	    	$gaidCount = count($gaid);
+	    	$gnCount = count($gn);
+	    	$rate = $gaidCount/$gnCount;
+	    	// 循环库存量
+	    	$_i = 0;// 取第几个商品属性id
+	    	foreach ($gn as $k => $v)
+	    	{
+	    		$_goodsAttrId = array();
+	    		for ($i=0; $i < $rate; $i++)
+	    		{
+	    			$_goodsAttrId[] = $gaid[$_i];
+	    			$_i++;
+	    		}
+	    		// 先升序排列
+	    		sort($_goodsAttrId,SORT_NUMERIC);
+	    		// 把取出来的商品属性id转化成字符串
+	    		$_goodsAttrId = (string)implode(',', $_goodsAttrId);
+	    		$gnModel->add(array(
+	    			'goods_id' => $id,
+	    			'goods_attr_id' => $_goodsAttrId,
+	    			'goods_number' => $v,
+	    		));
+	    	}
+	    	die;
+	    }
 	    // 根据商品id取出这件商品所有可选属性的值
 	    $gaModel = D('goods_attr');
 	    $gaData = $gaModel->alias('a')
-	    ->join('LEFT JOIN __ATTRIBUTE__ b ON a.attr=b.attr')
+	    ->field('a.*,b.attr_name')
+	    ->join('LEFT JOIN __ATTRIBUTE__ b ON a.attr_id=b.id')
 	    ->where(array(
 	    	'a.goods_id' => array('eq',$id),
-	    	'b.attr_type' => array('eq','可选')，
+	    	'b.attr_type' => array('eq','可选'),
 	    ))->select();
 		// 二维转三维
 		$_gaData = array();
@@ -22,8 +57,14 @@ class GoodsController extends Controller
 		{
 			$_gaData[$v['attr_name']][] = $v;
 		}
+
+		// 先取出这件商品设置过的库存量
+		$gnData = $gnModel->where(array(
+			'goods_id' => $id,
+		))->select();
 		$this->assign(array(
 			'gaData' => $_gaData,
+			'gnData' => $gnData,
 		));
 		// 设置页面信息
 		$this->assign(array(
