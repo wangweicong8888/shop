@@ -16,6 +16,22 @@ class GoodsController extends Controller
 	    	'a.goods_id' => array('eq',$id),
 	    	'b.attr_type' => array('eq','可选')，
 	    ))->select();
+		// 二维转三维
+		$_gaData = array();
+		foreach ($gaData as $k => $v)
+		{
+			$_gaData[$v['attr_name']][] = $v;
+		}
+		$this->assign(array(
+			'gaData' => $_gaData,
+		));
+		// 设置页面信息
+		$this->assign(array(
+			'_page_title' => '库存量' ,
+	    	'_page_btn_name'=> '返回列表',
+	    	'_page_btn_link'=>U('lst'),
+		));
+		$this->display();
 	}
 	// 处理删除属性
 	public function ajaxDelAttr()
